@@ -20,7 +20,7 @@ import numpy as np
 import pytest
 import torch
 from datasets import Dataset
-from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments
+from transformers import AutoModelForCausalLM, AutoTokenizer, DataCollatorForSeq2Seq, TrainingArguments
 
 from trl import SFTTrainer
 from trl.import_utils import is_peft_available
@@ -484,6 +484,44 @@ class SFTTrainerTester(unittest.TestCase):
 
             assert trainer.state.log_history[(-1)]["train_loss"] is not None
 
+            assert "model.safetensors" in os.listdir(tmp_dir + "/checkpoint-1")
+
+        # Tests for no packing, with no formatting func or dataset_text_field
+        # If no input/output cols exist, we should throw a KeyError
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            training_args = TrainingArguments(
+                output_dir=tmp_dir,
+                dataloader_drop_last=True,
+                evaluation_strategy="steps",
+                max_steps=2,
+                save_steps=1,
+                per_device_train_batch_size=2,
+            )
+            with pytest.raises(KeyError):
+                _ = SFTTrainer(
+                    model=self.model,
+                    args=training_args,
+                    train_dataset=self.dummy_dataset,
+                    dataset_text_field=None,
+                    formatting_func=None,
+                    max_seq_length=16,
+                    packing=False,
+                )
+
+            # if we have input/output cols, then things should work without issue
+            dataset_with_input_output = self.dummy_dataset.rename_column("question", "input").rename_column("answer", "output")
+            trainer = SFTTrainer(
+                model=self.model,
+                args=training_args,
+                train_dataset=dataset_with_input_output,
+                dataset_text_field=None,
+                formatting_func=None,
+                max_seq_length=16,
+                packing=False,
+            )
+            assert isinstance(trainer.data_collator, DataCollatorForSeq2Seq)
+            trainer.train()
+            assert trainer.state.log_history[(-1)]["train_loss"] is not None
             assert "model.safetensors" in os.listdir(tmp_dir + "/checkpoint-1")
 
     def test_sft_trainer_with_multiple_eval_datasets(self):
