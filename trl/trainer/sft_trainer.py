@@ -427,24 +427,28 @@ class SFTTrainer(Trainer):
         # Inspired from https://github.com/allenai/open-instruct/blob/main/open_instruct/finetune.py#L266
         def tokenize_input_output(element):
 
-            eos_token = ''
+            # It is difficult to add special tokens here, as separator / EOS tokens that may be added while tokenizing
+            # input texts may differ from concatenated text, making masking on input length incorrect.
+            # EOS and BOS tokens can be added to input / output texts beforehand by user if needed.
+            # TODO: we may need to change default of add_special_tokens to False.
             if add_special_tokens:
-                eos_token = tokenizer.eos_token
-            tokenizer.eos_token=None
+                warnings.warn(
+                    "Add special tokens is not supported for this type of data format. Hence flag will be ignored."
+                )
 
             new_source = []
             for (input_element, output_element) in zip(element['input'], element['output']):
                 if not input_element.endswith((' ', '\n', '\t')) and not output_element.startswith((' ', '\n', '\t')):
-                    new_source.append(input_element + ' ' + output_element + eos_token)
+                    new_source.append(input_element + ' ' + output_element)
                 else:
-                    new_source.append(input_element + output_element + eos_token)
+                    new_source.append(input_element + output_element)
 
-            tokenized_example = tokenizer(new_source, max_length=max_seq_length, truncation=True, padding=False, add_special_tokens=add_special_tokens)
+            tokenized_example = tokenizer(new_source, max_length=max_seq_length, truncation=True, padding=False)
             input_ids = tokenized_example.input_ids
             labels = input_ids
 
             # mask the prompt part for avoiding loss
-            tokenized_prompt = tokenizer(element['input'], max_length=max_seq_length, truncation=True, add_special_tokens=add_special_tokens)
+            tokenized_prompt = tokenizer(element['input'], max_length=max_seq_length, truncation=True, padding=False)
 
             new_labels = [([-100] * len(tokenized_instance)) + label_instance[len(tokenized_instance):] for tokenized_instance,label_instance in zip(tokenized_prompt.input_ids, labels) ]
             attention_mask = tokenized_example.attention_mask
