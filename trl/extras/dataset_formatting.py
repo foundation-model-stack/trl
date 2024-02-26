@@ -58,7 +58,7 @@ def instructions_formatting_function(tokenizer: AutoTokenizer):
 
 
 def get_formatting_func_from_dataset(
-    dataset: Union[Dataset, ConstantLengthDataset], tokenizer: AutoTokenizer
+    dataset: Union[Dataset, ConstantLengthDataset], tokenizer: AutoTokenizer, apply_chat_instruction_template=True
 ) -> Optional[Callable]:
     r"""
     Finds the correct formatting function based on the dataset structure. Currently supported datasets are:
@@ -83,6 +83,7 @@ def get_formatting_func_from_dataset(
                 return conversations_formatting_function(tokenizer, "conversations")
         elif dataset.features == FORMAT_MAPPING["instruction"]:
             logging.info("Formatting dataset with instruction format")
-            return instructions_formatting_function(tokenizer)
+            if apply_chat_instruction_template:
+                return instructions_formatting_function(tokenizer)
 
     return None
