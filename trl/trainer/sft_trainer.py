@@ -253,13 +253,13 @@ class SFTTrainer(Trainer):
             # if not stays #None
             formatting_func = get_formatting_func_from_dataset(train_dataset, tokenizer, apply_chat_instruction_template)
 
-        requires_input_output_keys = False
+        requires_prompt_completion_keys = False
         if not packing:
-            requires_input_output_keys = (dataset_text_field is None and formatting_func is None)
+            requires_prompt_completion_keys = (dataset_text_field is None and formatting_func is None)
             if data_collator is None:
                 # Fall back to the appropriate collator type based on the input_output_keys
                 data_collator = (DataCollatorForSeq2Seq(tokenizer=tokenizer, padding=True)
-                if requires_input_output_keys
+                if requires_prompt_completion_keys
                 else DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False))
 
         # Pre-process the datasets only once per node. The remaining processes will use the cache.
@@ -277,7 +277,7 @@ class SFTTrainer(Trainer):
                     num_of_sequences,
                     chars_per_token,
                     remove_unused_columns=args.remove_unused_columns if args is not None else True,
-                    requires_input_output_keys=requires_input_output_keys,
+                    requires_prompt_completion_keys=requires_prompt_completion_keys,
                     **dataset_kwargs,
                 )
             if eval_dataset is not None:
