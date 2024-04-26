@@ -508,12 +508,12 @@ class SFTTrainerTester(unittest.TestCase):
                     packing=False,
                 )
 
-            # if we have input/output cols, then things should work without issue
-            dataset_with_input_output = self.dummy_dataset.rename_column("question", "input").rename_column("answer", "output")
+            # with instruction format, things should work without issue
+            dataset_with_prompt_collection = self.dummy_instruction_dataset
             trainer = SFTTrainer(
                 model=self.model,
                 args=training_args,
-                train_dataset=dataset_with_input_output,
+                train_dataset=dataset_with_prompt_collection,
                 dataset_text_field=None,
                 formatting_func=None,
                 max_seq_length=16,
